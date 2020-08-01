@@ -54,9 +54,9 @@ class Service(models.Model):
 
 
 class CDR(models.Model):
-    timestamp = models.DateField(null=True, blank=True, db_index=True)
-    from_number = models.CharField(max_length=10, null=True, blank=True, db_index=True)
-    to_number = models.CharField(max_length=10, null=True, blank=True, db_index=True)
+    timestamp = models.DateTimeField(null=True, blank=True, db_index=True)
+    from_number = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    to_number = models.CharField(max_length=20, null=True, blank=True, db_index=True)
     duration = models.IntegerField(null=True, blank=True, db_index=True)
     call_type = models.CharField(max_length=20, default="outgoing call", null=True, blank=True, db_index=True)
     imei = models.CharField(max_length=20, null=True, blank=True, db_index=True)
