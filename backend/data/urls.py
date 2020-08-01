@@ -4,6 +4,7 @@ from . import views
 app_name = "data"
 
 urlpatterns = [
-    path('', views.FullCDRView.as_view(),  name="dataview")
+    path('', views.MinimalCombinedView.as_view(),  name="dataview"),
+    path('cdrs/', views.FullCDRView.as_view(), name="fullcdrview")
     # path('', views.MediaRedirect.as_view()),
 ]
