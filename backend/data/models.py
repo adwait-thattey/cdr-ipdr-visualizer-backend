@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.postgres.fields import JSONField
+from django.db.models import signals
+from django.dispatch import receiver
 
 from data.validators import mobile_validation
 from uuid import uuid4
@@ -14,7 +16,7 @@ class Person(models.Model):
 
 
 class MobileNumber(models.Model):
-    number = models.CharField(max_length=10, unique=True)
+    number = models.CharField(max_length=20, unique=True)
     last_known_location = JSONField(null=True, blank=True, default=None)
 
     associated_person = models.ForeignKey(Person, on_delete=models.CASCADE, default=None, related_name="mobile_numbers",
@@ -22,7 +24,7 @@ class MobileNumber(models.Model):
 
     def save(self, *args, **kwargs):
         if self.associated_person is None:
-            person = Person(name=f"Mobile : {self.mobile} (Unknown person)")
+            person = Person(name=f"Mobile : {self.number} (Unknown person)")
             person.save()
             self.associated_person = person
 
@@ -32,7 +34,7 @@ class MobileNumber(models.Model):
         self.mobile = mobile_validation(self.mobile)
 
     def __str__(self):
-        return f"{self.mobile} : {self.associated_person}"
+        return f"{self.number} : {self.associated_person}"
 
 
 class SimCard(models.Model):
@@ -44,7 +46,7 @@ class Device(models.Model):
     mobile_numbers = models.ManyToManyField(to=MobileNumber, blank=True, db_index=True)
     imei = models.CharField(max_length=20, db_index=True, null=True, blank=True)
     mac = models.CharField(max_length=20, db_index=True, null=True, blank=True)
-    persons = models.ForeignKey(to=Person, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
+    person = models.ForeignKey(to=Person, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
 
 
 class Service(models.Model):
@@ -90,3 +92,71 @@ class IPDR(models.Model):
 
     upload_data_volume = models.BigIntegerField(null=True, blank=True, db_index=True)
     download_data_volume = models.BigIntegerField(null=True, blank=True, db_index=True)
+
+
+class Anomaly(models.Model):
+    devices = models.ManyToManyField(Device, blank=True)
+    mobile_numbers = models.ManyToManyField(MobileNumber, blank=True)
+    sim_cards = models.ManyToManyField(SimCard, blank=True)
+    cdr_record = models.ManyToManyField(CDR, blank=True)
+    ipdr_record = models.ManyToManyField(IPDR, blank=True)
+
+    text = models.TextField()
+
+
+@receiver(signals.post_save, sender=CDR)
+def create_associated_mobile_numbers(sender, instance: CDR, **kwargs):
+    from_num = instance.from_number
+    to_num = instance.to_number
+    imei = instance.imei
+    imsi = instance.imsi
+
+    from_mobile = MobileNumber.objects.filter(number=from_num)
+    to_mobile = MobileNumber.objects.filter(number=to_num)
+
+    if from_mobile.exists():
+        from_mobile = from_mobile[0]
+        simcard = SimCard.objects.filter(imsi=imsi)
+        if not simcard.exists() and imsi:
+            simcard = SimCard.objects.create(mobile_number=from_mobile, imsi=imsi)
+    else:
+        from_mobile = MobileNumber.objects.create(number=from_num)
+        if imsi:
+            simcard = SimCard.objects.create(mobile_number=from_mobile, imsi=imsi)
+    if to_mobile.exists():
+        to_mobile = to_mobile[0]
+    else:
+        to_mobile = MobileNumber.objects.create(number=to_num)
+
+    device = Device.objects.filter(imei=imei)
+    if device.exists():
+        device = device[0]
+    elif imei:
+        device = Device.objects.create(imei=imei)
+    else:
+        device = None
+    # print(device.mobile_numbers.all())
+    found_person = None
+    if device and device.person:
+        found_person = device.person
+    # print(device.mobile_numbers.all())
+    if from_mobile.associated_person.name[:6].lower() == "mobile":
+        if found_person:
+            from_mobile.associated_person = found_person
+            from_mobile.save()
+        if not found_person and device:
+            device.person = from_mobile.associated_person
+            device.save()
+    else:
+        if not found_person and device:
+            device.person = from_mobile.associated_person
+            device.save()
+
+    if device:
+        device.mobile_numbers.add(from_mobile)
+
+    # else:
+    # if device.person != from_mobile.associated_person:
+    #     Anomaly.objects.create(text=f"New number {from_num} found on IMEI {imei} which was previously on number {device.mobile_numbers}")
+
+    # print(device.mobile_numbers.all())
