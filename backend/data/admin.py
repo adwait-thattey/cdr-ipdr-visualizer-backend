@@ -1,8 +1,5 @@
 from django.contrib import admin
 
-from .models import Person
-from .models import Mobile
+from .models import Person, MobileNumber, SimCard, Device, CDR, IPDR
 
-admin.site.register(Person)
-
-admin.site.register(Mobile)
+admin.site.register((Person, MobileNumber, SimCard, Device, CDR, IPDR))
