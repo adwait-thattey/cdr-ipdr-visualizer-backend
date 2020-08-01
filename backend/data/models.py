@@ -47,6 +47,12 @@ class Device(models.Model):
     persons = models.ForeignKey(to=Person, on_delete=models.CASCADE, null=True, blank=True, db_index=True)
 
 
+class Service(models.Model):
+    name = models.CharField(max_length=100, db_index=True)
+    ip = models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    port = models.IntegerField(null=True, blank=True, db_index=True)
+
+
 class CDR(models.Model):
     timestamp = models.DateField(null=True, blank=True, db_index=True)
     from_number = models.CharField(max_length=10, null=True, blank=True, db_index=True)
