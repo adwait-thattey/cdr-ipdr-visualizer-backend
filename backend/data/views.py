@@ -183,9 +183,9 @@ class MinimalCombinedView(APIView):
 
                 if only_user_ids:
 
-                    if data_obj['from'] not in only_user_ids or data_obj['to'] not in only_user_ids:
+                    if data_obj['from'] not in only_user_ids:
                         continue
-                if data_obj['from'] in not_user_ids or data_obj['to'] in not_user_ids:
+                if data_obj['from'] in not_user_ids:
                     continue
                 ipdr_data.append(data_obj)
 
