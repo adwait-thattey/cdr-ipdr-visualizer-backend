@@ -18,3 +18,28 @@ class MediaManagerView(APIView):
             return Response(ser.data, status=status.HTTP_201_CREATED)
         else:
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CDRUploadView(APIView):
+    parser_class = (FileUploadParser,)
+
+    def post(self, request, *args, **kwargs):
+        ser = MediaManagerSerializer(data=request.data)
+        if ser.is_valid():
+            obj = ser.save()
+
+            return Response(ser.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class IPDRUploadView(APIView):
+    parser_class = (FileUploadParser,)
+
+    def post(self, request, *args, **kwargs):
+        ser = MediaManagerSerializer(data=request.data)
+        if ser.is_valid():
+            obj = ser.save()
+
+            return Response(ser.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
