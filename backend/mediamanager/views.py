@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from .serializers import MediaManagerSerializer
 # Create your views here.
 from rest_framework.views import APIView
-
+from .speech_recog_views import speech2text
 
 class MediaManagerView(APIView):
     parser_class = (FileUploadParser,)
@@ -31,6 +31,20 @@ class CDRUploadView(APIView):
             return Response(ser.data, status=status.HTTP_201_CREATED)
         else:
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SpeechUploadView(APIView):
+    parser_class = (FileUploadParser,)
+
+    def post(self, request, *args, **kwargs):
+        ser = MediaManagerSerializer(data=request.data)
+        if ser.is_valid():
+            obj = ser.save()
+            context = speech2text(obj.media_file.path)
+            return Response(context, status=status.HTTP_201_CREATED)
+        else:
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class IPDRUploadView(APIView):
     parser_class = (FileUploadParser,)

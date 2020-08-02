@@ -6,5 +6,6 @@ app_name = "mediamanager"
 urlpatterns = [
     path('upload/cdr/', views.CDRUploadView.as_view(), name="uploadview"),
     path('upload/ipdr/', views.IPDRUploadView.as_view(), name="uploadview"),
+    path('upload/speech/', views.SpeechUploadView.as_view(), name="speehupload")
     # path('', views.MediaRedirect.as_view()),
 ]
