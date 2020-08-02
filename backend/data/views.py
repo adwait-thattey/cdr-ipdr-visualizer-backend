@@ -92,8 +92,10 @@ def get_cdr_filtered_queryset(query_params, cdr_qset=None):
     print(phone_numbers)
     if phone_numbers:
         qset = qset.filter(Q(from_number__in=phone_numbers) | Q(to_number__in=phone_numbers))
+        print(qset)
 
-    qset = qset.exclude(Q(from_number__in=phone_numbers) | Q(to_number__in=phone_numbers))
+    if not_phone_numbers:
+        qset = qset.exclude(Q(from_number__in=not_phone_numbers) | Q(to_number__in=not_phone_numbers))
     return qset
 
 
