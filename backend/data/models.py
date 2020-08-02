@@ -160,3 +160,72 @@ def create_associated_mobile_numbers(sender, instance: CDR, **kwargs):
     #     Anomaly.objects.create(text=f"New number {from_num} found on IMEI {imei} which was previously on number {device.mobile_numbers}")
 
     # print(device.mobile_numbers.all())
+
+
+class TrackedObject(models.Model):
+    attribute = models.CharField(max_length=20, db_index=True)
+    value = models.CharField(max_length=100, db_index=True)
+
+
+def process_watchlist_raw_data(data):
+    lines = [l.strip() for l in data.split('\n')]
+    persons = list()
+    for l in lines:
+        try:
+            t, val = l.split(',')
+            t = t.lower()
+            TrackedObject.objects.create(attribute=t, value=val)
+
+            if t == "user_id" or t == "user":
+                p = Person.objects.filter(id=int(val))
+                if p.exists():
+                    persons.append(p[0])
+            elif t in ["phone", "number", "mobile", "mobile_number"]:
+                mob = MobileNumber.objects.filter(number=val)
+                if mob.exists():
+                    mob = mob[0]
+                    if mob.associated_person:
+                        print(mob.associated_person)
+                        persons.append(mob.associated_person)
+            elif t == "imei":
+                device = Device.objects.filter(imei=val)
+                if device.exists():
+                    device = device[0]
+                    if device.person:
+                        print(device.person)
+                        persons.append(device.person)
+            elif t == "mac":
+                device = Device.objects.filter(mac=val)
+                if device.exists():
+                    device = device[0]
+                    if device.person:
+                        print(device.person)
+                        persons.append(device.person)
+        except Exception as e:
+            print(e)
+
+    # print(persons)
+    return persons
+
+
+class WatchList(models.Model):
+    name = models.CharField(max_length=200)
+    users_list = models.CharField(max_length=500, null=True, blank=True)
+    to_display = models.BooleanField(default=True)
+    raw_data = models.TextField()
+
+    def save(self, *args, **kwargs):
+        instance = self
+        ps = process_watchlist_raw_data(instance.raw_data)
+        print(ps)
+        instance.users_list = ",".join([str(p.id) for p in ps])
+        super().save(*args, **kwargs)
+
+
+# @receiver(signals.post_save, sender=WatchList)
+# def add_persons_ref_into_watchlists(sender, instance: WatchList, **kwargs):
+#     # instance.persons.clear()
+
+
+class Alert(models.Model):
+    name = models.CharField(max_length=300)

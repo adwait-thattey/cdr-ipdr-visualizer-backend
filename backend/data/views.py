@@ -8,9 +8,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from data.models import CDR, MobileNumber, Person
+from data.models import CDR, MobileNumber, Person, WatchList
 from .serializers import FullCDRSerializer, MinimalCDRSerializer, FullIPDRSerializer, MinimalIPDRSerializer, \
-    PersonFullSerializer
+    PersonFullSerializer, WatchListSerializer
 
 
 def get_generic_filtered_queryset(qset, query_params) -> list:
@@ -95,7 +95,7 @@ class MinimalCombinedView(APIView):
         types = request.query_params.get('type')
 
         cdr_data = []
-        ipdr_data=[]
+        ipdr_data = []
         only_user_ids = set([int(i) for i in request.query_params.getlist('user_id')])
         not_user_ids = set([int(i) for i in request.query_params.getlist('not_user_id')])
 
@@ -156,3 +156,28 @@ class DetailedPersonView(APIView):
         relevant_persons = Person.objects.filter(id__in=person_ids)
         ser = PersonFullSerializer(relevant_persons, many=True)
         return Response(ser.data, status=status.HTTP_200_OK)
+
+
+class WatchListView(APIView):
+
+    def get(self, request):
+        w = WatchList.objects.all()
+        ser = WatchListSerializer(w, many=True)
+        return Response(ser.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        wid = request.data.get('id')
+        ws = None
+        if wid:
+            obj = WatchList.objects.filter(id=wid)
+            if obj:
+                ws = WatchListSerializer(obj, data=request.data)
+
+        if not ws:
+            ws = WatchListSerializer(data=request.data)
+
+        if ws.is_valid():
+            w = ws.save()
+            return Response(ws.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(ws.errors, status=status.HTTP_400_BAD_REQUEST)

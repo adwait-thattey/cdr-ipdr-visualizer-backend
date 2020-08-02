@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Person, MobileNumber, Device, SimCard, CDR, IPDR
+from .models import Person, MobileNumber, Device, SimCard, CDR, IPDR, WatchList
 
 
 class PersonFullSerializer(serializers.ModelSerializer):
@@ -56,3 +56,16 @@ class FullIPDRSerializer(serializers.ModelSerializer):
     class Meta:
         model = IPDR
         fields = '__all__'
+
+
+class WatchListSerializer(serializers.ModelSerializer):
+    users_list = serializers.SerializerMethodField()
+
+    def get_users_list(self, obj):
+        users = [int(i) for i in obj.users_list.split(',')]
+        return users
+
+    class Meta:
+        model = WatchList
+        fields = '__all__'
+        read_only_fields = ('id', 'users_list')
