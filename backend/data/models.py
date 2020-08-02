@@ -90,8 +90,8 @@ class IPDR(models.Model):
     location_lat = models.FloatField(null=True, blank=True, db_index=True)
     location_long = models.FloatField(null=True, blank=True, db_index=True)
 
-    upload_data_volume = models.BigIntegerField(null=True, blank=True, db_index=True)
-    download_data_volume = models.BigIntegerField(null=True, blank=True, db_index=True)
+    upload_data_volume = models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    download_data_volume = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
 
 @receiver(signals.post_save, sender=IPDR)
@@ -138,16 +138,6 @@ def associated_ipdr(sender, instance: IPDR, **kwargs):
 
     if device:
         device.mobile_numbers.add(from_mobile)
-
-
-class Anomaly(models.Model):
-    devices = models.ManyToManyField(Device, blank=True)
-    mobile_numbers = models.ManyToManyField(MobileNumber, blank=True)
-    sim_cards = models.ManyToManyField(SimCard, blank=True)
-    cdr_record = models.ManyToManyField(CDR, blank=True)
-    ipdr_record = models.ManyToManyField(IPDR, blank=True)
-
-    text = models.TextField()
 
 
 @receiver(signals.post_save, sender=CDR)
