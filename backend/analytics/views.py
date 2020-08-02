@@ -27,15 +27,18 @@ def get_graph_from_df(df):
     return G
 
 
-def get_community_and_importance(data_array, algo='girvan'):
+def get_community_and_importance(data_array, algo='modularity'):
     df = pd.DataFrame(data_array)
     df = df[['from_number', 'to_number', 'duration']]
     df = df.dropna()
+
     G = get_graph_from_df(df)
+    print(G.edges)
     if algo == 'modularity':
         communities = sorted(nxcom.greedy_modularity_communities(G), key=len, reverse=True)
     else:
         result = nxcom.girvan_newman(G)
+        print(list(result))
         communities = next(result)
     total_cm = len(communities)
     persons = {}
