@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from data.models import CDR, MobileNumber, Person, WatchList
+from data.models import CDR, MobileNumber, Person, WatchList, IPDR
 from .serializers import FullCDRSerializer, MinimalCDRSerializer, FullIPDRSerializer, MinimalIPDRSerializer, \
     PersonFullSerializer, WatchListSerializer
 
@@ -83,8 +83,22 @@ def get_generic_filtered_queryset(qset, query_params) -> list:
     return qset
 
 
-def get_cdr_filtered_queryset(query_params):
-    qset = CDR.objects.filter()
+def get_cdr_filtered_queryset(query_params, cdr_qset=None):
+    if cdr_qset is None:
+        qset = CDR.objects.filter()
+    else:
+        qset = cdr_qset
+
+    qset = get_generic_filtered_queryset(qset, query_params)
+    return qset
+
+
+def get_ipdr_filtered_queryset(query_params, ipdr_qset=None):
+    if ipdr_qset is None:
+        qset = IPDR.objects.filter()
+    else:
+        qset = ipdr_qset
+
     qset = get_generic_filtered_queryset(qset, query_params)
     return qset
 
@@ -156,6 +170,35 @@ class DetailedPersonView(APIView):
         relevant_persons = Person.objects.filter(id__in=person_ids)
         ser = PersonFullSerializer(relevant_persons, many=True)
         return Response(ser.data, status=status.HTTP_200_OK)
+
+
+class UserTimelineView(APIView):
+
+    def get(self, request, user_id):
+        numbers = set(MobileNumber.objects.filter(associated_person__id=int(user_id)).values_list('number', flat=True))
+        cdr_data = CDR.objects.filter(from_number__in=numbers)
+
+        cdr_data = get_cdr_filtered_queryset(request.query_params, cdr_data)
+
+        ser = FullCDRSerializer(cdr_data, many=True)
+
+        cdr_data = ser.data
+        for o in cdr_data:
+            o["type"] = "cdr"
+
+        ipdr_data = IPDR.objects.filter(from_number__in=numbers)
+
+        ipdr_data = get_ipdr_filtered_queryset(request.query_params, ipdr_data)
+
+        ipser = FullIPDRSerializer(ipdr_data, many=True)
+
+        ipdr_data = ipser.data
+        for o in ipdr_data:
+            o["type"] = "ipdr"
+
+        cdr_data.extend(ipdr_data)
+
+        return Response(cdr_data, status=status.HTTP_200_OK)
 
 
 class WatchListView(APIView):
