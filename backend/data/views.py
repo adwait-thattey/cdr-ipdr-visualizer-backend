@@ -46,13 +46,7 @@ def get_generic_filtered_queryset(qset, query_params) -> list:
         qset = qset.filter(location_long__gte=min_longitude, location_long__lte=max_longitude)
 
     # Phone Numbers filter
-    phone_numbers = query_params.getlist('phone_number')
-    not_phone_numbers = query_params.getlist('not_phone_number')
-    print(phone_numbers)
-    if phone_numbers:
-        qset = qset.filter(Q(from_number__in=phone_numbers) | Q(to_number__in=phone_numbers))
 
-    qset = qset.exclude(Q(from_number__in=phone_numbers) | Q(to_number__in=phone_numbers))
 
     # IMEI filter
     imei_numbers = query_params.getlist('imei')
@@ -93,6 +87,13 @@ def get_cdr_filtered_queryset(query_params, cdr_qset=None):
         etime = dtparse(etime)
         qset = qset.filter(timestamp__lte=etime)
 
+    phone_numbers = query_params.getlist('phone_number')
+    not_phone_numbers = query_params.getlist('not_phone_number')
+    print(phone_numbers)
+    if phone_numbers:
+        qset = qset.filter(Q(from_number__in=phone_numbers) | Q(to_number__in=phone_numbers))
+
+    qset = qset.exclude(Q(from_number__in=phone_numbers) | Q(to_number__in=phone_numbers))
     return qset
 
 
