@@ -210,11 +210,6 @@ def create_associated_mobile_numbers(sender, instance: CDR, **kwargs):
     # print(device.mobile_numbers.all())
 
 
-class TrackedObject(models.Model):
-    attribute = models.CharField(max_length=20, db_index=True)
-    value = models.CharField(max_length=100, db_index=True)
-
-
 def process_watchlist_raw_data(data):
     lines = [l.strip() for l in data.split('\n')]
     persons = list()
@@ -274,6 +269,45 @@ class WatchList(models.Model):
 # def add_persons_ref_into_watchlists(sender, instance: WatchList, **kwargs):
 #     # instance.persons.clear()
 
-
 class Alert(models.Model):
     name = models.CharField(max_length=300)
+    entity = models.CharField(max_length=300)
+    value = models.CharField(max_length=300)
+    alert_type = models.CharField(max_length=100)
+    alert_text = models.TextField()
+
+
+class TrackedObject(models.Model):
+    alert = models.ForeignKey(to=Alert, on_delete=models.CASCADE, null=True, blank=True)
+    attribute = models.CharField(max_length=20, db_index=True)
+    value = models.CharField(max_length=100, db_index=True)
+
+
+class AlertInstance(models.Model):
+    alert = models.ForeignKey(to=Alert, on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+
+@receiver(signals.post_save, sender=Alert)
+def create_alert_tracked_objects(sender, instance: Alert, **kwargs):
+    if instance.entity.lower() == "phone":
+        TrackedObject.objects.create(alert=instance, attribute="from_number", value=instance.value)
+        TrackedObject.objects.create(alert=instance, attribute="to_number", value=instance.value)
+
+    if instance.entity.lower() == "tower":
+        TrackedObject.objects.create(alert=instance, attribute="cell_id", value=instance.value)
+
+    if instance.entity.lower() == "watchlist":
+        wl = WatchList.objects.filter(name__icontains=instance.value)
+        if wl.exists():
+            wl = wl[0]
+        else:
+            return
+
+        rd = wl.raw_data
+        lines = [i.strip() for i in rd.split('\n')]
+        for l in lines:
+            a, b = l.split(',')
+            if a.lower() == "phone":
+                TrackedObject.objects.create(alert=instance, attribute="from_number", value=b)
+                TrackedObject.objects.create(alert=instance, attribute="to_number", value=b)
