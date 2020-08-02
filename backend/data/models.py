@@ -94,6 +94,52 @@ class IPDR(models.Model):
     download_data_volume = models.BigIntegerField(null=True, blank=True, db_index=True)
 
 
+@receiver(signals.post_save, sender=IPDR)
+def associated_ipdr(sender, instance: IPDR, **kwargs):
+    from_num = instance.from_number
+    imei = instance.imei
+    imsi = instance.imsi
+
+    from_mobile = MobileNumber.objects.filter(number=from_num)
+
+    if from_mobile.exists():
+        from_mobile = from_mobile[0]
+        simcard = SimCard.objects.filter(imsi=imsi)
+        if not simcard.exists() and imsi:
+            simcard = SimCard.objects.create(mobile_number=from_mobile, imsi=imsi)
+    else:
+        from_mobile = MobileNumber.objects.create(number=from_num)
+        if imsi:
+            simcard = SimCard.objects.create(mobile_number=from_mobile, imsi=imsi)
+
+    device = Device.objects.filter(imei=imei)
+    if device.exists():
+        device = device[0]
+    elif imei:
+        device = Device.objects.create(imei=imei)
+    else:
+        device = None
+    # print(device.mobile_numbers.all())
+    found_person = None
+    if device and device.person:
+        found_person = device.person
+    # print(device.mobile_numbers.all())
+    if from_mobile.associated_person.name[:6].lower() == "mobile":
+        if found_person:
+            from_mobile.associated_person = found_person
+            from_mobile.save()
+        if not found_person and device:
+            device.person = from_mobile.associated_person
+            device.save()
+    else:
+        if not found_person and device:
+            device.person = from_mobile.associated_person
+            device.save()
+
+    if device:
+        device.mobile_numbers.add(from_mobile)
+
+
 class Anomaly(models.Model):
     devices = models.ManyToManyField(Device, blank=True)
     mobile_numbers = models.ManyToManyField(MobileNumber, blank=True)
