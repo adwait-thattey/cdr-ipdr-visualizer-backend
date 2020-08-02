@@ -16,15 +16,6 @@ from .serializers import FullCDRSerializer, MinimalCDRSerializer, FullIPDRSerial
 def get_generic_filtered_queryset(qset, query_params) -> list:
     # time_filter
 
-    stime = query_params.get('time_start')
-    if stime is not None:
-        stime = dtparse(stime)
-        qset = qset.filter(timestamp__gte=stime)
-
-    etime = query_params.get('time_end')
-    if etime is not None:
-        etime = dtparse(etime)
-        qset = qset.filter(timestamp__lte=etime)
 
     # duration filter
     duration_min = query_params.get('duration_min')
@@ -90,6 +81,17 @@ def get_cdr_filtered_queryset(query_params, cdr_qset=None):
         qset = cdr_qset
 
     qset = get_generic_filtered_queryset(qset, query_params)
+
+    stime = query_params.get('time_start')
+    if stime is not None:
+        stime = dtparse(stime)
+        qset = qset.filter(timestamp__gte=stime)
+
+    etime = query_params.get('time_end')
+    if etime is not None:
+        etime = dtparse(etime)
+        qset = qset.filter(timestamp__lte=etime)
+
     return qset
 
 
@@ -100,6 +102,16 @@ def get_ipdr_filtered_queryset(query_params, ipdr_qset=None):
         qset = ipdr_qset
 
     qset = get_generic_filtered_queryset(qset, query_params)
+
+    stime = query_params.get('time_start')
+    if stime is not None:
+        stime = dtparse(stime)
+        qset = qset.filter(start_time__gte=stime)
+
+    etime = query_params.get('time_end')
+    if etime is not None:
+        etime = dtparse(etime)
+        qset = qset.filter(start_time__lte=etime)
     return qset
 
 
