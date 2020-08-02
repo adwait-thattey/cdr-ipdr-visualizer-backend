@@ -1,6 +1,12 @@
 from rest_framework import serializers
 
-from .models import Person, MobileNumber, Device, SimCard, CDR, IPDR, WatchList
+from .models import Person, MobileNumber, Device, SimCard, CDR, IPDR, WatchList, Service
+
+
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = "__all__"
 
 
 class PersonFullSerializer(serializers.ModelSerializer):

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Person, MobileNumber, SimCard, Device, WatchList, TrackedObject, Alert, CDR, IPDR
+from .models import Person, MobileNumber, SimCard, Device, WatchList, TrackedObject, Alert, CDR, IPDR, Service
 
 admin.site.register((Person, MobileNumber, SimCard, Device, WatchList, TrackedObject, Alert))
 
@@ -17,3 +17,10 @@ class IPDRAdmin(admin.ModelAdmin):
 
 
 admin.site.register(IPDR, IPDRAdmin)
+
+
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'ip', 'port')
+
+
+admin.site.register(Service, ServiceAdmin)

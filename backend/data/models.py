@@ -139,6 +139,18 @@ def associated_ipdr(sender, instance: IPDR, **kwargs):
     if device:
         device.mobile_numbers.add(from_mobile)
 
+    services = Service.objects.filter(ip=instance.destination_ip)
+    if services.exists():
+        port_filtered_services = services.filter(port=instance.destination_port)
+        if port_filtered_services.exists():
+            pass
+        else:
+            Service.objects.create(name=services[0].name, ip=instance.destination_ip,
+                                   port=instance.destination_port)
+    else:
+        Service.objects.create(name=f"unknown service at {instance.destination_ip}", ip=instance.destination_ip,
+                               port=instance.destination_port)
+
 
 @receiver(signals.post_save, sender=CDR)
 def create_associated_mobile_numbers(sender, instance: CDR, **kwargs):

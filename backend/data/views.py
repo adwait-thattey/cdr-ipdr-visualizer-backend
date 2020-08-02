@@ -8,9 +8,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from data.models import CDR, MobileNumber, Person, WatchList, IPDR
+from data.models import CDR, MobileNumber, Person, WatchList, IPDR, Service
 from .serializers import FullCDRSerializer, MinimalCDRSerializer, FullIPDRSerializer, MinimalIPDRSerializer, \
-    PersonFullSerializer, WatchListSerializer
+    PersonFullSerializer, WatchListSerializer, ServiceSerializer
 
 
 def get_generic_filtered_queryset(qset, query_params) -> list:
@@ -149,7 +149,47 @@ class MinimalCombinedView(APIView):
 
             # ser = FullCDRSerializer(cdr_qset, many=True)
 
-            return Response({'cdrData': cdr_data}, status=status.HTTP_200_OK)
+        if types is None or types == "ipdr" or types == "all":
+            ipdr_qset = get_ipdr_filtered_queryset(request.query_params)
+            ipdr_temp_data = {}
+            from_phone_numbers = set(ipdr_qset.values_list('from_number', flat=True))
+            phone_numbers = from_phone_numbers
+            ph_us_set = set(
+                MobileNumber.objects.filter(number__in=phone_numbers).values_list('number', 'associated_person'))
+            ph_us_dict = {tup[0]: tup[1] for tup in ph_us_set}
+
+            ip_serv_set = set(Service.objects.all().values_list('ip', 'id'))
+            ip_serv_dict = {tup[0]: tup[1] for tup in ip_serv_set}
+
+            for i in ipdr_qset:
+                fn = i.from_number
+                tn = i.destination_ip
+                key_string = f'{fn}-{tn}'
+                if key_string not in ipdr_temp_data:
+                    ipdr_temp_data[key_string] = list()
+
+                ipdr_temp_data[key_string].append(i.id)
+
+            for key_str in ipdr_temp_data:
+                fnum, tnum = key_str.split('-')
+                data_obj = {}
+                data_obj['from'] = ph_us_dict[fnum]
+                if tnum in ip_serv_dict:
+                    data_obj['to'] = ip_serv_dict[tnum]
+                else:
+                    data_obj['to'] = -1
+
+                data_obj['calls'] = ipdr_temp_data[key_str]
+
+                if only_user_ids:
+
+                    if data_obj['from'] not in only_user_ids or data_obj['to'] not in only_user_ids:
+                        continue
+                if data_obj['from'] in not_user_ids or data_obj['to'] in not_user_ids:
+                    continue
+                ipdr_data.append(data_obj)
+
+        return Response({'cdrData': cdr_data, 'ipdrData': ipdr_data}, status=status.HTTP_200_OK)
 
 
 class FullCDRView(APIView):
@@ -160,6 +200,16 @@ class FullCDRView(APIView):
         cdr_ids = request.query_params.getlist('cdr')
         relevantCDRs = CDR.objects.filter(id__in=cdr_ids)
         ser = FullCDRSerializer(relevantCDRs, many=True)
+        return Response(ser.data, status=status.HTTP_200_OK)
+
+
+class FullIPDRView(APIView):
+
+    def get(self, request):
+        # for cdr
+        ipdr_ids = request.query_params.getlist('ipdr')
+        relevantIPDRs = IPDR.objects.filter(id__in=ipdr_ids)
+        ser = FullIPDRSerializer(relevantIPDRs, many=True)
         return Response(ser.data, status=status.HTTP_200_OK)
 
 
@@ -224,3 +274,12 @@ class WatchListView(APIView):
             return Response(ws.data, status=status.HTTP_201_CREATED)
         else:
             return Response(ws.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ServiceView(APIView):
+
+    def get(self, request):
+        ids = request.query_params.getlist('service')
+        services = Service.objects.filter(id__in=ids)
+        ser = ServiceSerializer(services, many=True)
+        return Response(ser.data, status=status.HTTP_200_OK)
