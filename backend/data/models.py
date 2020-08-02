@@ -72,7 +72,7 @@ class CDR(models.Model):
 
 
 class IPDR(models.Model):
-    start_time = models.DateField(null=True, blank=True, db_index=True)
+    start_time = models.DateTimeField(null=True, blank=True, db_index=True)
     duration = models.IntegerField(null=True, blank=True, db_index=True)
 
     private_ip = models.CharField(max_length=100, null=True, blank=True, db_index=True)
