@@ -1,6 +1,7 @@
 import math
 
 from dateutil.parser import parse as dtparse
+from django.db.models import Q
 from django.shortcuts import render
 
 # Create your views here.
@@ -47,11 +48,11 @@ def get_generic_filtered_queryset(qset, query_params) -> list:
     # Phone Numbers filter
     phone_numbers = query_params.getlist('phone_number')
     not_phone_numbers = query_params.getlist('not_phone_number')
-
+    print(phone_numbers)
     if phone_numbers:
-        qset = qset.filter(from_number__in=phone_numbers)
+        qset = qset.filter(Q(from_number__in=phone_numbers) | Q(to_number__in=phone_numbers))
 
-    qset = qset.exclude(from_number__in=not_phone_numbers)
+    qset = qset.exclude(Q(from_number__in=phone_numbers) | Q(to_number__in=phone_numbers))
 
     # IMEI filter
     imei_numbers = query_params.getlist('imei')
