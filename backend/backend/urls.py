@@ -22,6 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('mediamanager/', include('mediamanager.urls')),
     path('data/', include('data.urls')),
+    path('analytics/', include('analytics.urls'))
 ]
 
 if settings.DEBUG:

@@ -2,9 +2,14 @@ import networkx as nx
 import pandas as pd
 # import os
 import networkx.algorithms.community as nxcom
+from rest_framework import status
+from rest_framework.response import Response
 
+from data.views import get_cdr_filtered_queryset
+from data.models import CDR
 
 # import matplotlib.pyplot as plt
+from rest_framework.views import APIView
 
 
 def get_graph_from_df(df):
@@ -93,3 +98,15 @@ def get_possible_spammers(data_array, ratio_thresh=0.7, dur_thresh=2):
         if num_out / total > ratio_thresh and global_avg / avg_out_dur > dur_thresh:
             spammers.append(mn)
     return spammers
+
+
+class CommunityGraphView(APIView):
+    def get(self, request):
+        cdr_qset = get_cdr_filtered_queryset(request.query_params)
+
+        arr = list(cdr_qset.values_list('from_number', 'to_number', 'duration'))
+        d = [{'from_number': i[0], 'to_number': i[1], 'duration': i[2]} for i in arr]
+
+        comm = get_community_and_importance(d)
+
+        return Response(comm, status=status.HTTP_200_OK)
