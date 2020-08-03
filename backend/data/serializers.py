@@ -68,7 +68,7 @@ class WatchListSerializer(serializers.ModelSerializer):
     users_list = serializers.SerializerMethodField()
 
     def get_users_list(self, obj):
-        users = [int(i) for i in obj.users_list.split(',')]
+        users = [int(i) for i in obj.users_list.split(',') if i]
         return users
 
     class Meta:
