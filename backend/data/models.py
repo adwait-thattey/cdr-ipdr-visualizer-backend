@@ -1,6 +1,8 @@
+import datetime
+
 from django.db import models
 from django.contrib.postgres.fields import JSONField
-from django.db.models import signals
+from django.db.models import signals, Q
 from django.dispatch import receiver
 
 from data.validators import mobile_validation
@@ -269,12 +271,12 @@ class WatchList(models.Model):
 # def add_persons_ref_into_watchlists(sender, instance: WatchList, **kwargs):
 #     # instance.persons.clear()
 
+
 class Alert(models.Model):
     name = models.CharField(max_length=300)
     entity = models.CharField(max_length=300)
     value = models.CharField(max_length=300)
-    alert_type = models.CharField(max_length=100)
-    alert_text = models.TextField()
+    alert_type = models.CharField(max_length=100, default="new record")
 
 
 class TrackedObject(models.Model):
@@ -286,6 +288,23 @@ class TrackedObject(models.Model):
 class AlertInstance(models.Model):
     alert = models.ForeignKey(to=Alert, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
+    tracked_obj = models.ForeignKey(to=TrackedObject, on_delete=models.CASCADE, null=True)
+    cdr_instance = models.IntegerField(null=True, blank=True)
+    ipdr_instance = models.IntegerField(null=True, blank=True)
+
+    @property
+    def alert_text(self):
+        t1 = f"Alert {self.alert.name} fired at {self.timestamp}"
+        return t1
+
+
+def fire_alert(to):
+    AlertInstance.objects.create(alert=to.alert, tracked_obj=to)
+
+
+class AlertNotification(models.Model):
+    alert_instance = models.OneToOneField(to=AlertInstance, on_delete=models.CASCADE)
+    is_seen = models.BooleanField(default=False)
 
 
 @receiver(signals.post_save, sender=Alert)
@@ -311,3 +330,35 @@ def create_alert_tracked_objects(sender, instance: Alert, **kwargs):
             if a.lower() == "phone":
                 TrackedObject.objects.create(alert=instance, attribute="from_number", value=b)
                 TrackedObject.objects.create(alert=instance, attribute="to_number", value=b)
+
+
+@receiver(signals.post_save, sender=AlertInstance)
+def create_alert_notif(sender, instance: AlertInstance, **kwargs):
+    AlertNotification.objects.create(alert_instance=instance)
+
+
+@receiver(signals.post_save, sender=CDR)
+def fire_CDR_alerts(sender, instance: CDR, **kwargs):
+    from_number = instance.from_number
+    to_number = instance.to_number
+    cell_id = instance.cell_id
+
+    tracked_objects = TrackedObject.objects.filter(
+        Q(attribute='from_number', value=from_number) | Q(attribute='to_number', value=to_number) | Q(
+            attribute='cell_id', value=cell_id))
+
+    for to in tracked_objects:
+        fire_alert(to)
+
+
+@receiver(signals.post_save, sender=IPDR)
+def fire_IPDR_alerts(sender, instance: IPDR, **kwargs):
+    from_number = instance.from_number
+    cell_id = instance.cell_id
+
+    tracked_objects = TrackedObject.objects.filter(
+        Q(attribute='from_number', value=from_number) | Q(
+            attribute='cell_id', value=cell_id))
+
+    for to in tracked_objects:
+        fire_alert(to)

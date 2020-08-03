@@ -8,14 +8,13 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from data.models import CDR, MobileNumber, Person, WatchList, IPDR, Service
+from data.models import CDR, MobileNumber, Person, WatchList, IPDR, Service, Alert, AlertInstance, AlertNotification
 from .serializers import FullCDRSerializer, MinimalCDRSerializer, FullIPDRSerializer, MinimalIPDRSerializer, \
-    PersonFullSerializer, WatchListSerializer, ServiceSerializer
+    PersonFullSerializer, WatchListSerializer, ServiceSerializer, AlertSerializer, AlertInstanceSerializer
 
 
 def get_generic_filtered_queryset(qset, query_params) -> list:
     # time_filter
-
 
     # duration filter
     duration_min = query_params.get('duration_min')
@@ -294,4 +293,39 @@ class ServiceView(APIView):
         ids = request.query_params.getlist('service')
         services = Service.objects.filter(id__in=ids)
         ser = ServiceSerializer(services, many=True)
+        return Response(ser.data, status=status.HTTP_200_OK)
+
+
+class AlertView(APIView):
+
+    def get(self, request):
+        alerts = Alert.objects.all()
+        ser = AlertSerializer(alerts, many=True)
+        return Response(ser.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        ser = AlertSerializer(data=request.data)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AlertInstanceView(APIView):
+
+    def get(self, request):
+        alertinstances = AlertInstance.objects.all().order_by('-timestamp')
+        ser = AlertInstanceSerializer(alertinstances, many=True)
+        return Response(ser.data, status=status.HTTP_200_OK)
+
+
+class AlertNotificationView(APIView):
+
+    def get(self, request):
+        notifs = AlertInstance.objects.filter(alertnotification__is_seen=False)
+        ser = AlertInstanceSerializer(notifs, many=True)
+        for n in notifs:
+            n.alertnotification.is_seen=True
+            n.alertnotification.save()
         return Response(ser.data, status=status.HTTP_200_OK)
