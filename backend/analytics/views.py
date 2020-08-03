@@ -110,3 +110,29 @@ class CommunityGraphView(APIView):
         comm = get_community_and_importance(d)
 
         return Response(comm, status=status.HTTP_200_OK)
+
+
+class SimilarNumbersView(APIView):
+
+    def get(self, request, number):
+        cdr_qset = get_cdr_filtered_queryset(request.query_params)
+
+        arr = list(cdr_qset.values_list('from_number', 'to_number', 'duration'))
+        d = [{'from_number': i[0], 'to_number': i[1], 'duration': i[2]} for i in arr]
+
+        comm = get_n_similar_numbers(d, 2)
+        if number not in comm:
+            return Response({"error": "number not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(comm[number], status=status.HTTP_200_OK)
+
+
+class SpammersView(APIView):
+    def get(self, request):
+        cdr_qset = get_cdr_filtered_queryset(request.query_params)
+
+        arr = list(cdr_qset.values_list('from_number', 'to_number', 'duration', 'call_type'))
+        d = [{'from_number': i[0], 'to_number': i[1], 'duration': i[2], 'call_type': i[3]} for i in arr]
+
+        comm = get_possible_spammers(d)
+        return Response(comm, status=status.HTTP_200_OK)
