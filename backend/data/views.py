@@ -2,13 +2,14 @@ import math
 import random
 
 from dateutil.parser import parse as dtparse
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 
 # Create your views here.
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from data.autils import get_single_user_analytics
 from data.models import CDR, MobileNumber, Person, WatchList, IPDR, Service, Alert, AlertInstance, AlertNotification
 from .serializers import FullCDRSerializer, MinimalCDRSerializer, FullIPDRSerializer, MinimalIPDRSerializer, \
     PersonFullSerializer, WatchListSerializer, ServiceSerializer, AlertSerializer, AlertInstanceSerializer
@@ -348,6 +349,7 @@ class AlertNotificationView(APIView):
         return Response(ser.data, status=status.HTTP_200_OK)
 
 
+
 class TowerAnalysis(APIView):
     def get(self, request, towerid):
 
@@ -383,3 +385,11 @@ class TowerAnalysis(APIView):
         TOWER_ANALYSIS_DATA[towerid] = combined_res
 
         return Response(combined_res, status=status.HTTP_200_OK)
+
+class SingleUserAnalysisView(APIView):
+
+    def get(self, request, user_id):
+        person = get_object_or_404(Person, id=int(user_id))
+        an_obj = get_single_user_analytics(person)
+        return Response(an_obj, status=status.HTTP_200_OK)
+
