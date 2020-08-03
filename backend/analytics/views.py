@@ -1,11 +1,12 @@
-from django.shortcuts import render
 import networkx as nx
 import pandas as pd
 # import os
 import networkx.algorithms.community as nxcom
 
 
-# Create your views here.
+# import matplotlib.pyplot as plt
+
+
 def get_graph_from_df(df):
     G = nx.Graph()
     G.add_nodes_from(list(df['from_number']))
@@ -27,19 +28,21 @@ def get_graph_from_df(df):
     return G
 
 
-def get_community_and_importance(data_array, algo='modularity'):
+def get_community_and_importance(data_array, algo='girvan'):
+    # output coming in form [6306002228': (3, 0.00027210884353741496)], modify and send
     df = pd.DataFrame(data_array)
     df = df[['from_number', 'to_number', 'duration']]
     df = df.dropna()
-
     G = get_graph_from_df(df)
-    print(G.edges)
     if algo == 'modularity':
         communities = sorted(nxcom.greedy_modularity_communities(G), key=len, reverse=True)
     else:
-        result = nxcom.girvan_newman(G)
-        print(list(result))
-        communities = next(result)
+        try:
+            result = nxcom.girvan_newman(G)
+            communities = next(result)
+        except:
+            print('this is fucked up')
+            communities = sorted(nxcom.greedy_modularity_communities(G), key=len, reverse=True)
     total_cm = len(communities)
     persons = {}
     com_count = 1
@@ -48,5 +51,45 @@ def get_community_and_importance(data_array, algo='modularity'):
         importance = nx.betweenness_centrality(G_sub)
         for node in cm:
             persons[node] = (com_count, importance[node])
+        com_count += 1
     return persons, total_cm
 
+
+def get_n_similar_numbers(data_array, n, algo='girvan'):
+    df = pd.DataFrame(data_array)
+    df = df[['from_number', 'to_number', 'duration']]
+    df = df.dropna()
+    G = get_graph_from_df(df)
+    if algo == 'modularity':
+        communities = sorted(nxcom.greedy_modularity_communities(G), key=len, reverse=True)
+    else:
+        try:
+            result = nxcom.girvan_newman(G)
+            communities = next(result)
+        except:
+            communities = sorted(nxcom.greedy_modularity_communities(G), key=len, reverse=True)
+    possible_same = {}
+    for cm in communities:
+        G_S = G.subgraph(nodes=list(cm))
+        all_sub_nodes = G_S.nodes
+        for node in all_sub_nodes:
+            possible_same[node] = list(set(all_sub_nodes) - set(G_S[node]))[:n]
+    # check location and filter
+    return possible_same
+
+
+def get_possible_spammers(data_array, ratio_thresh=0.7, dur_thresh=2):
+    df = pd.DataFrame(data_array)
+    df = df[['from_number', 'to_number', 'duration', 'call_type']]
+    df = df.dropna()
+    spammers = []
+    global_avg = sum(df['duration'] / len(df))
+    for mn in df['from_number'].unique():
+        mndf = df[df['from_number'] == mn]
+        total = len(mndf)
+        mndf = df[df['call_type'] == 'OUT']
+        num_out = len(mndf)
+        avg_out_dur = sum(mndf['duration']) / len(mndf['duration'])
+        if num_out / total > ratio_thresh and global_avg / avg_out_dur > dur_thresh:
+            spammers.append(mn)
+    return spammers
