@@ -311,6 +311,16 @@ class AlertView(APIView):
         else:
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self, request):
+        alertId = request.data.get('id')
+        if alertId:
+            alert = Alert.objects.filter(id=int(alertId))
+            if alert.exists():
+                alert.delete()
+                return Response(status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 class AlertInstanceView(APIView):
 
@@ -326,6 +336,6 @@ class AlertNotificationView(APIView):
         notifs = AlertInstance.objects.filter(alertnotification__is_seen=False)
         ser = AlertInstanceSerializer(notifs, many=True)
         for n in notifs:
-            n.alertnotification.is_seen=True
+            n.alertnotification.is_seen = True
             n.alertnotification.save()
         return Response(ser.data, status=status.HTTP_200_OK)
