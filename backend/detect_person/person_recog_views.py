@@ -37,3 +37,5 @@ def get_name(filepath):
     return context
 
 
+if __name__ == "__main__":
+    get_name('/run/media/coderdude/Adwait/Projects/sih2020/repos/cdr-ipdr-visualizer-backend/backend/media/0_jackson_19.wav')
