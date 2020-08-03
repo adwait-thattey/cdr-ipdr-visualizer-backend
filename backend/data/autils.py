@@ -46,6 +46,7 @@ def get_single_user_analytics(p):
         for s in Service.objects.all().order_by('id')[:10]:
             sobj = {}
             sobj['id'] = s.id
+            sobj['name'] = s.name
             sobj['total_times'] = random.randint(0, 100)
             sobj['total_data'] = random.randint(10, 100) * sobj['total_times']
             sobj['total_duration'] = sobj['total_times'] * random.randint(5, 30)
@@ -61,12 +62,20 @@ def get_single_user_analytics(p):
     cdr_data = []
     for d in daterange:
         tottime = random.randint(10, 3000)
-        cdr_data.append({str(d): tottime})
+        obj = {
+            'date': str(d),
+            'total_time': tottime
+        }
+        cdr_data.append(obj)
 
     ipdr_data = []
     for d in daterange:
         tottime = random.randint(10, 3000)
-        ipdr_data.append({str(d): tottime})
+        obj = {
+            'date': str(d),
+            'total_data': tottime
+        }
+        ipdr_data.append(obj)
 
     final_obj = {
         'users': users_obj,
