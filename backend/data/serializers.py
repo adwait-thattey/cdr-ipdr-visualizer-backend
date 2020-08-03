@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Person, MobileNumber, Device, SimCard, CDR, IPDR, WatchList, Service
+from .models import Person, MobileNumber, Device, SimCard, CDR, IPDR, WatchList, Service, Alert, AlertInstance
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -75,3 +75,44 @@ class WatchListSerializer(serializers.ModelSerializer):
         model = WatchList
         fields = '__all__'
         read_only_fields = ('id', 'users_list')
+
+
+class AlertSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Alert
+        fields = "__all__"
+        read_only_fields = ('id',)
+
+
+class AlertInstanceSerializer(serializers.ModelSerializer):
+    alert = serializers.SerializerMethodField()
+    object = serializers.SerializerMethodField()
+    instance = serializers.SerializerMethodField()
+
+    def get_alert(self, obj):
+        ass = AlertSerializer(obj.alert)
+        return ass.data
+
+    def get_object(self, obj):
+        to = obj.tracked_obj
+        return {'attribute': to.attribute, 'value': to.value}
+
+    def get_instance(self, obj:AlertInstance):
+        if obj.cdr_instance:
+            cdr_obj = CDR.objects.filter(id=obj.cdr_instance)
+            if cdr_obj.exists():
+                cdr_ser = FullCDRSerializer(cdr_obj)
+                return cdr_ser.data
+        elif obj.ipdr_instance:
+            ipdr_obj = IPDR.objects.filter(id=obj.ipdr_instance)
+            if ipdr_obj.exists():
+                ipdr_ser = FullIPDRSerializer(ipdr_obj)
+                return ipdr_ser.data
+        else:
+            return {}
+
+    class Meta:
+        model = AlertInstance
+        fields = ('id', 'timestamp', 'alert', 'object', 'instance')
+
+
