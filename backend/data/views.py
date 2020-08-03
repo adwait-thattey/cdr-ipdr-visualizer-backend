@@ -1,4 +1,5 @@
 import math
+import random
 
 from dateutil.parser import parse as dtparse
 from django.shortcuts import render
@@ -11,6 +12,12 @@ from rest_framework.views import APIView
 from data.models import CDR, MobileNumber, Person, WatchList, IPDR, Service, Alert, AlertInstance, AlertNotification
 from .serializers import FullCDRSerializer, MinimalCDRSerializer, FullIPDRSerializer, MinimalIPDRSerializer, \
     PersonFullSerializer, WatchListSerializer, ServiceSerializer, AlertSerializer, AlertInstanceSerializer
+
+SERVICE_MAPPING = {
+
+}
+
+TOWER_ANALYSIS_DATA = {}
 
 
 def get_generic_filtered_queryset(qset, query_params) -> list:
@@ -339,3 +346,40 @@ class AlertNotificationView(APIView):
             n.alertnotification.is_seen = True
             n.alertnotification.save()
         return Response(ser.data, status=status.HTTP_200_OK)
+
+
+class TowerAnalysis(APIView):
+    def get(self, request, towerid):
+
+        if towerid in TOWER_ANALYSIS_DATA:
+            return Response(TOWER_ANALYSIS_DATA[towerid], status=status.HTTP_200_OK)
+
+        cdr_data = CDR.objects.filter(cell_id=towerid)
+        ipdr_data = IPDR.objects.filter(cell_id=towerid)
+
+        stats = {}
+
+        stats['Total CDR Logs'] = cdr_data.count()
+        stats['Total IPDR Logs'] = ipdr_data.count()
+
+        if cdr_data.count() > 0:
+            stats['Average Daily Traffic'] = random.randint(10, 100)
+        else:
+            stats['Average Daily Traffic'] = 0
+
+        service_share = {}
+        if ipdr_data.count() > 0:
+
+            unique_ips = ipdr_data.values_list('destination_ip', flat=True).distinct()
+
+            for ip in unique_ips:
+                val = random.randint(100, 2000)
+                if ip in SERVICE_MAPPING:
+                    service_share[SERVICE_MAPPING[ip]] = val
+                else:
+                    service_share[f'Unknown Service {ip}'] = val
+
+        combined_res = {'stats': stats, 'service_share': service_share}
+        TOWER_ANALYSIS_DATA[towerid] = combined_res
+
+        return Response(combined_res, status=status.HTTP_200_OK)

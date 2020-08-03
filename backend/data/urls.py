@@ -13,6 +13,7 @@ urlpatterns = [
     path('services/', views.ServiceView.as_view(), name="service view"),
     path('alerts/', views.AlertView.as_view(), name="alerts"),
     path('alertinstances/', views.AlertInstanceView.as_view(), name='alertinstances'),
-    path('alertnotifications/', views.AlertNotificationView.as_view(), name="alertnotif")
+    path('alertnotifications/', views.AlertNotificationView.as_view(), name="alertnotif"),
+    path('tower/<towerid>/', views.TowerAnalysis.as_view(), name="tower anan")
     # path('', views.MediaRedirect.as_view()),
 ]
