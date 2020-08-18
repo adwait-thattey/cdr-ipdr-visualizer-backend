@@ -4,6 +4,7 @@ from . import views
 app_name = "mediamanager"
 
 urlpatterns = [
-    path('upload/', views.MediaManagerView.as_view(), name="uploadview")
+    path('upload/cdr/', views.CDRUploadView.as_view(), name="uploadview"),
+    path('upload/ipdr/', views.IPDRUploadView.as_view(), name="uploadview"),
     # path('', views.MediaRedirect.as_view()),
 ]
